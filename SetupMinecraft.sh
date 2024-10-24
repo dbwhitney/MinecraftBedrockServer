@@ -12,29 +12,46 @@
 
 echo "Minecraft Bedrock Server installation script by James A. Chambers"
 echo "Latest version always at https://github.com/dbwhitney/MinecraftBedrockServer"
-echo "Don't forget to set up port forwarding on your router!  The default port is 19132"
+echo "Don't forget to set up port forwarding on your router! The default port is 19132"
 
 # Randomizer for user agent
 RandNum=$(echo $((1 + $RANDOM % 5000)))
 
-# You can override this for a custom installation directory but I only recommend it if you are using a separate drive for the server
-# It is meant to point to the root folder that holds all servers
-# For example if you had a separate drive mounted at /newdrive you would use DirName='/newdrive' for all servers
-# The servers will be separated by their name/label into folders
-# Default directory is the user's home directory
+# Prompt user for installation directory
+echo "Please specify the installation directory (press Enter to use the default ~):"
+read -p "Directory: " DirName
+DirName=${DirName:-$(readlink -e ~)} # Use ~ if no directory is specified
 
-
-read -p "Enter the directory to install/update Minecraft server [/home/$USER]: " install_dir
-install_dir=${install_dir:-/home/$USER}
-
-# Confirm the chosen directory
-echo "Installing/updating Minecraft server in: $install_dir"
-
-# Check if the directory exists, if not, create it
-if [ ! -d "$install_dir" ]; then
-  echo "Directory does not exist. Creating directory..."
-  mkdir -p "$install_dir"
+# Ensure directory exists
+if [ ! -d "$DirName" ]; then
+  echo "Directory does not exist, creating it now..."
+  mkdir -p "$DirName"
 fi
+
+# Function to read input from user with a prompt
+function read_with_prompt {
+  variable_name="$1"
+  prompt="$2"
+  default="${3-}"
+  unset $variable_name
+  while [[ ! -n ${!variable_name} ]]; do
+    read -p "$prompt: " $variable_name </dev/tty
+    if [ ! -n "$(which xargs)" ]; then
+      declare -g $variable_name=$(echo "${!variable_name}" | xargs)
+    fi
+    declare -g $variable_name=$(echo "${!variable_name}" | head -n1 | awk '{print $1;}' | tr -cd '[a-zA-Z0-9]._-')
+    if [[ -z ${!variable_name} ]] && [[ -n "$default" ]]; then
+      declare -g $variable_name=$default
+    fi
+    echo -n "$prompt : ${!variable_name} -- accept (y/n)?"
+    read answer </dev/tty
+    if [[ "$answer" == "${answer#[Yy]}" ]]; then
+      unset $variable_name
+    else
+      echo "$prompt: ${!variable_name}"
+    fi
+  done
+}
 
 # Navigate to the installation directory
 cd "$install_dir" || { echo "Failed to change directory to $install_dir. Exiting."; exit 1; }
