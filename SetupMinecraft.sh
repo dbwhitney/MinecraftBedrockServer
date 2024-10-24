@@ -24,50 +24,21 @@ RandNum=$(echo $((1 + $RANDOM % 5000)))
 # Default directory is the user's home directory
 
 
-# Parse arguments for custom options
-while getopts "z:" opt; do
-  case $opt in
-    z)
-      # Use the custom directory provided by the user
-      DirName=$(readlink -e "$OPTARG")
-      ;;
-    *)
-      echo "Invalid option: -$OPTARG" >&2
-      exit 1
-      ;;
-  esac
-done
+read -p "Enter the directory to install/update Minecraft server [/home/$USER]: " install_dir
+install_dir=${install_dir:-/home/$USER}
 
-# If the custom directory is not valid, fall back to the home directory
-if [ -z "$DirName" ]; then
-  DirName=$(readlink -e ~)
+# Confirm the chosen directory
+echo "Installing/updating Minecraft server in: $install_dir"
+
+# Check if the directory exists, if not, create it
+if [ ! -d "$install_dir" ]; then
+  echo "Directory does not exist. Creating directory..."
+  mkdir -p "$install_dir"
 fi
 
+# Navigate to the installation directory
+cd "$install_dir" || { echo "Failed to change directory to $install_dir. Exiting."; exit 1; }
 
-# Function to read input from user with a prompt
-function read_with_prompt {
-  variable_name="$1"
-  prompt="$2"
-  default="${3-}"
-  unset $variable_name
-  while [[ ! -n ${!variable_name} ]]; do
-    read -p "$prompt: " $variable_name </dev/tty
-    if [ ! -n "$(which xargs)" ]; then
-      declare -g $variable_name=$(echo "${!variable_name}" | xargs)
-    fi
-    declare -g $variable_name=$(echo "${!variable_name}" | head -n1 | awk '{print $1;}' | tr -cd '[a-zA-Z0-9]._-')
-    if [[ -z ${!variable_name} ]] && [[ -n "$default" ]]; then
-      declare -g $variable_name=$default
-    fi
-    echo -n "$prompt : ${!variable_name} -- accept (y/n)?"
-    read answer </dev/tty
-    if [[ "$answer" == "${answer#[Yy]}" ]]; then
-      unset $variable_name
-    else
-      echo "$prompt: ${!variable_name}"
-    fi
-  done
-}
 
 Update_Scripts() {
   # Remove existing scripts
